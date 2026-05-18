@@ -1,16 +1,9 @@
-# web-client
+# web-client Vicinity
 
-**Épice 13** — Application web habitant (React + TypeScript + Vite).
-
-À initialiser le moment venu :
+Squelette **Vite + React + TypeScript** pour l’app habitant :
 
 ```bash
-npm create vite@latest . -- --template react-ts
+npm install && npm run dev
 ```
 
-Fonctionnalités à porter : feed quartier, annonces/services, événements
-(swipe), messagerie multimédia, signatures de documents, votes, profil.
-
-Authentification via SSO OIDC (Épice 4), API consommée depuis le backend
-Node.js. Routing avec React Router. State global à arbitrer (Zustand /
-Redux Toolkit) au moment du scaffolding.
+Les appels API passent par le proxy Vite (`vite.config.ts`) : **`/api` → backend `localhost:3000`**.

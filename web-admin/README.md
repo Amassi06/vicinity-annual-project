@@ -1,16 +1,9 @@
-# web-admin
+# web-admin Vicinity
 
-**Épice 13** — Back-office modérateur/administrateur (React + TypeScript + Vite).
-
-À initialiser le moment venu :
+Back-office **Vite + React + TypeScript** :
 
 ```bash
-npm create vite@latest . -- --template react-ts
+npm install && npm run dev
 ```
 
-Fonctionnalités à porter : gestion des quartiers (carto PostGIS), modération
-des annonces/messages, validation des comptes, supervision des votes,
-gestion des consentements RGPD, exports et purges.
-
-Authentification SSO OIDC + MFA obligatoire (Épice 4). UI orientée tableaux
-et cartes (Leaflet/MapLibre pour la couche géo).
+Port suggéré **5174** (voir `vite.config.ts`). Proxy **`/api` → localhost:3000**.
