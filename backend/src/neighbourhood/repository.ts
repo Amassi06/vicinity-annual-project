@@ -120,3 +120,53 @@ export async function deleteNeighbourhood(id: string): Promise<boolean> {
   `;
   return result > 0;
 }
+
+interface MatchRow {
+  id: string;
+  name: string;
+}
+
+/**
+ * Retourne tous les quartiers contenant le point [lon, lat] (SRID 4326).
+ * Plusieurs quartiers peuvent matcher si leurs limites se chevauchent
+ * (cf. listOverlapsFor pour la détection ; cette fonction est tolérante).
+ */
+export async function findNeighbourhoodsContaining(
+  longitude: number,
+  latitude: number,
+): Promise<{ id: string; name: string }[]> {
+  return prisma.$queryRaw<MatchRow[]>`
+    SELECT id, name
+    FROM neighbourhoods
+    WHERE ST_Contains(
+      boundary,
+      ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+    );
+  `;
+}
+
+interface OverlapRow {
+  id: string;
+  name: string;
+  overlap_area: number;
+}
+
+/**
+ * Retourne la liste des quartiers dont la limite **intersecte** celle du
+ * quartier `id` (hors lui-même), avec la surface commune (degrés²).
+ * Permet à l'admin de détecter immédiatement les conflits de limites.
+ */
+export async function listOverlapsFor(
+  id: string,
+): Promise<{ id: string; name: string; overlapArea: number }[]> {
+  const rows = await prisma.$queryRaw<OverlapRow[]>`
+    SELECT n.id, n.name,
+           ST_Area(ST_Intersection(n.boundary, target.boundary)) AS overlap_area
+    FROM neighbourhoods n
+    JOIN neighbourhoods target ON target.id = ${id}::uuid
+    WHERE n.id <> target.id
+      AND ST_Intersects(n.boundary, target.boundary)
+      AND NOT ST_Touches(n.boundary, target.boundary);
+  `;
+  return rows.map((r) => ({ id: r.id, name: r.name, overlapArea: Number(r.overlap_area) }));
+}

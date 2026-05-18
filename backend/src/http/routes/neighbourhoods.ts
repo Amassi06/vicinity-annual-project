@@ -94,4 +94,38 @@ router.delete(
   },
 );
 
+// ----------------------------------------------------------------------------
+// Requêtes spatiales PostGIS
+// ----------------------------------------------------------------------------
+
+const PointQuery = z.object({
+  lon: z.coerce.number().gte(-180).lte(180),
+  lat: z.coerce.number().gte(-90).lte(90),
+});
+
+router.get('/neighbourhoods/lookup/point', requireAuth, async (req: Request, res: Response) => {
+  const parsed = PointQuery.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'invalid_query' });
+    return;
+  }
+  const matches = await repo.findNeighbourhoodsContaining(parsed.data.lon, parsed.data.lat);
+  res.status(200).json({ matches });
+});
+
+router.get(
+  '/neighbourhoods/:id/overlaps',
+  requireAuth,
+  requireRole('ADMIN'),
+  async (req: Request, res: Response) => {
+    const params = UuidParam.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: 'invalid_id' });
+      return;
+    }
+    const overlaps = await repo.listOverlapsFor(params.data.id);
+    res.status(200).json({ overlaps });
+  },
+);
+
 export const neighbourhoodRouter = router;
