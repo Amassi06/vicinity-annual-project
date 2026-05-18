@@ -8,6 +8,7 @@ import { documentsRouter } from './routes/documents.js';
 import { eventsRouter } from './routes/events.js';
 import { messagesRouter } from './routes/messages.js';
 import { pollsRouter } from './routes/polls.js';
+import { dslRouter } from './routes/dsl.js';
 
 export function createApp(): Express {
   const app = express();
@@ -22,5 +23,6 @@ export function createApp(): Express {
   app.use(eventsRouter);
   app.use(messagesRouter);
   app.use(pollsRouter);
+  app.use(dslRouter);
   return app;
 }

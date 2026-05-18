@@ -27,19 +27,27 @@ db.messages.find(
 ).sort({ createdAt: -1 }).limit(50)
 ```
 
+## Livraison Vicinity (minimal)
+
+Compilateur **TypeScript** : `backend/src/dsl/mini-find-lang.ts`.
+Route HTTP **`POST /dsl/compile`** (JWT `MODERATOR` ou `ADMIN`).
+
+Référence lex/bison hors CI :
+
+- `grammar/mongo-dsl.y`
+- `grammar/mongo-dsl.l.example` (à renommer après `bison -d`)
+
 ## Architecture
 
 ```
 lex-yacc/
 ├── grammar/
-│   ├── lexer.l       # règles lex/flex
-│   └── parser.y      # règles yacc/bison
-├── src/              # AST + générateur JS (ou WASM exposé au backend)
-├── tests/            # corpus d'exemples + expected output
-└── Makefile          # cibles build/test
+│   ├── mongo-dsl.y            # yacc/bison
+│   └── mongo-dsl.l.example    # flex
+├── Makefile                   # stubs de build local
+└── README.md                  # ce fichier
 ```
 
 ## Intégration
 
-Le binaire (ou la lib JS générée) est appelé par le backend Node.js, qui
-expose un endpoint `POST /dsl/execute` (protégé MFA, audit RGPD).
+Voir `backend/src/http/routes/dsl.ts`.
