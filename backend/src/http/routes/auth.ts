@@ -3,6 +3,7 @@ import { z } from 'zod';
 import * as authService from '../../auth/service.js';
 import { requireAuth, requireRole } from '../../auth/middleware.js';
 import { logger } from '../../logger/index.js';
+import { prisma } from '../../db/prisma.js';
 
 const router = Router();
 
@@ -78,8 +79,21 @@ router.post('/auth/logout', async (req: Request, res: Response) => {
   res.status(204).send();
 });
 
-router.get('/auth/me', requireAuth, (req: Request, res: Response) => {
-  res.status(200).json(req.auth);
+router.get('/auth/me', requireAuth, async (req: Request, res: Response) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.auth!.sub },
+    select: { email: true, role: true, mfaEnabled: true },
+  });
+  if (!user) {
+    res.status(404).json({ error: 'user_not_found' });
+    return;
+  }
+  res.status(200).json({
+    sub: req.auth!.sub,
+    email: user.email,
+    role: user.role,
+    mfa: user.mfaEnabled,
+  });
 });
 
 router.get('/auth/admin-only', requireAuth, requireRole('ADMIN'), (_req, res) => {

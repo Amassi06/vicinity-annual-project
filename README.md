@@ -234,6 +234,15 @@ cd web-client && npm install && npm run dev   # proxifie /api → :3000
 cd web-admin && npm install && npm run dev    # même proxy, port 5174 affiché par Vite
 ```
 
+**Cartographie des quartiers** : les cartes Leaflet ne s’affichent que lorsqu’au moins un périmètre GeoJSON existe (ou, côté admin pour le premier tracé, après géolocalisation). Le cadrage est limité aux bornes des polygones (`maxBounds`, zoom 12–18) — pas de vue « carte du monde ».
+
+| App | Modules branchés sur l’API |
+|-----|----------------------------|
+| **web-client** (`:5173`) | Auth, carte quartiers + lookup point, événements (+ reco Neo4j), annonces, sondages, messagerie REST + Socket.IO, portefeuille |
+| **web-admin** (`:5174`) | Auth, CRUD quartiers (Geoman), chevauchements PostGIS, compilateur DSL (MOD/ADMIN), crédit points (ADMIN) |
+
+Promouvoir un compte en `ADMIN` (Prisma Studio / SQL) pour créer des quartiers depuis l’admin.
+
 ### Commandes Make
 
 | Commande     | Effet                                                    |
