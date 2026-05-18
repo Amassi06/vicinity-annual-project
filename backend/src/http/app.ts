@@ -3,6 +3,7 @@ import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
 import { neighbourhoodRouter } from './routes/neighbourhoods.js';
 import { walletRouter } from './routes/wallet.js';
+import { listingsRouter } from './routes/listings.js';
 
 export function createApp(): Express {
   const app = express();
@@ -12,5 +13,6 @@ export function createApp(): Express {
   app.use(authRouter);
   app.use(neighbourhoodRouter);
   app.use(walletRouter);
+  app.use(listingsRouter);
   return app;
 }
