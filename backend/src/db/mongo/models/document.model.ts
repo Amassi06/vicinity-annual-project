@@ -1,4 +1,4 @@
-import mongoose, { Schema, type Document as MongoDocument, type Types } from 'mongoose';
+import mongoose, { Schema, type Document as MongoDocument } from 'mongoose';
 
 export interface SignatureZone {
   page: number;
@@ -7,7 +7,7 @@ export interface SignatureZone {
   width: number;
   height: number;
   required: boolean;
-  signedBy?: Types.ObjectId | null;
+  signedBy?: string | null;
   signedAt?: Date | null;
   signatureHash?: string | null;
 }
@@ -34,7 +34,7 @@ const SignatureZoneSchema = new Schema<SignatureZone>(
     width: { type: Number, required: true, min: 0 },
     height: { type: Number, required: true, min: 0 },
     required: { type: Boolean, default: true },
-    signedBy: { type: Schema.Types.ObjectId, default: null },
+    signedBy: { type: String, default: null },
     signedAt: { type: Date, default: null },
     signatureHash: { type: String, default: null },
   },

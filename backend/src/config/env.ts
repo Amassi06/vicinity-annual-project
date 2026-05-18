@@ -30,6 +30,8 @@ const EnvSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
   JWT_ISSUER: z.string().default('connected-neighbours'),
+  STORAGE_DIR: z.string().default('./storage/documents'),
+  STORAGE_MAX_PDF_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

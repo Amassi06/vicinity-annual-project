@@ -67,6 +67,9 @@ junit.xml
 tmp/
 .tmp/
 
+# === Local PDF storage (DEV) — production uses S3/MinIO ===
+backend/storage/
+
 # === Husky internals ===
 .husky/_/
 
