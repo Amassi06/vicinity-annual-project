@@ -41,11 +41,11 @@ export async function createEventOrganizer(userId: string, input: EventCreateInp
     | { type: 'Point'; coordinates: [number, number]; address?: string }
     | undefined;
   if (input.lon !== undefined && input.lat !== undefined) {
-    location = {
-      type: 'Point',
-      coordinates: [input.lon, input.lat],
-      address: input.address,
-    };
+    if (input.address !== undefined) {
+      location = { type: 'Point', coordinates: [input.lon, input.lat], address: input.address };
+    } else {
+      location = { type: 'Point', coordinates: [input.lon, input.lat] };
+    }
   }
 
   const doc = await EventModel.create({
@@ -78,7 +78,7 @@ export async function listPublishedEvents(neighbourhoodId: string) {
 
 export async function publishEvent(eventId: string, userId: string) {
   const doc = await EventModel.findById(eventId);
-  if (!doc) return null as const;
+  if (!doc) return null;
   if (doc.organizerId !== userId) throw new Error('forbidden');
   if (!(doc.endsAt > doc.startsAt)) throw new Error('invalid_dates');
   doc.status = 'published';
@@ -93,7 +93,7 @@ export async function publishEvent(eventId: string, userId: string) {
 
 export async function cancelEvent(eventId: string, userId: string) {
   const doc = await EventModel.findById(eventId);
-  if (!doc) return null as const;
+  if (!doc) return null;
   if (doc.organizerId !== userId) throw new Error('forbidden');
   doc.status = 'cancelled';
   await doc.save();
@@ -104,7 +104,7 @@ export async function cancelEvent(eventId: string, userId: string) {
 export async function expressInterest(eventId: string, userId: string) {
   await syncUserNeo4jProfile(userId);
   const doc = await EventModel.findById(eventId);
-  if (!doc) return null as const;
+  if (!doc) return null;
   if (doc.status !== 'published') throw new Error('not_published');
   if (!doc.interested.includes(userId)) {
     doc.interested.push(userId);
@@ -123,7 +123,7 @@ export async function expressInterest(eventId: string, userId: string) {
 export async function declineEvent(eventId: string, userId: string) {
   await syncUserNeo4jProfile(userId);
   const doc = await EventModel.findById(eventId);
-  if (!doc) return null as const;
+  if (!doc) return null;
   if (doc.status !== 'published') throw new Error('not_published');
   if (!doc.declined.includes(userId)) {
     doc.declined.push(userId);
