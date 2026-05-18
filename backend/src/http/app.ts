@@ -7,6 +7,7 @@ import { listingsRouter } from './routes/listings.js';
 import { documentsRouter } from './routes/documents.js';
 import { eventsRouter } from './routes/events.js';
 import { messagesRouter } from './routes/messages.js';
+import { pollsRouter } from './routes/polls.js';
 
 export function createApp(): Express {
   const app = express();
@@ -20,5 +21,6 @@ export function createApp(): Express {
   app.use(documentsRouter);
   app.use(eventsRouter);
   app.use(messagesRouter);
+  app.use(pollsRouter);
   return app;
 }

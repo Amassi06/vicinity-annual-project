@@ -7,12 +7,14 @@ import { connectMongo, disconnectMongo } from './db/mongo/connection.js';
 import { getNeo4jDriver, closeNeo4j } from './db/neo4j/driver.js';
 import { applyNeo4jConstraints } from './db/neo4j/constraints.js';
 import { attachSocketHttp, shutdownSockets } from './realtime/socket-server.js';
+import { bootstrapPlugins } from './plugins/bootstrap.js';
 
 async function bootstrap(): Promise<void> {
   await prisma.$connect();
   await connectMongo();
   getNeo4jDriver();
   await applyNeo4jConstraints();
+  bootstrapPlugins();
 
   const app = createApp();
   const server = createHttpServer(app);
