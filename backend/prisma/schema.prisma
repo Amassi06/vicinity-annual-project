@@ -91,6 +91,31 @@ enum AuditAction {
   CONSENT_REVOKED
 }
 
+enum PointTxReason {
+  WELCOME_BONUS
+  SERVICE_PAYMENT
+  SERVICE_PAYOUT
+  ADMIN_ADJUSTMENT
+  REFUND
+}
+
+model PointTransaction {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fromUserId  String?       @map("from_user_id") @db.Uuid
+  toUserId    String?       @map("to_user_id") @db.Uuid
+  amount      Int
+  reason      PointTxReason
+  listingId   String?       @map("listing_id")
+  contractId  String?       @map("contract_id")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([listingId])
+  @@index([createdAt])
+  @@map("point_transactions")
+}
+
 model AuditLog {
   id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
