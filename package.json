@@ -1,8 +1,8 @@
 {
-  "name": "connected-neighbours",
+  "name": "vicinity",
   "version": "0.0.0",
   "private": true,
-  "description": "Connected Neighbours — root tooling (commit hooks, lint of governance files).",
+  "description": "Vicinity — racine du monorepo (hooks git, tooling partagé).",
   "engines": {
     "node": ">=20.11.0",
     "npm": ">=10.0.0"

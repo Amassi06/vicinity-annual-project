@@ -1,4 +1,4 @@
-# Contribuer à Connected Neighbours
+# Contribuer à Vicinity
 
 ## Workflow
 

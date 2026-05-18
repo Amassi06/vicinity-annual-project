@@ -1,4 +1,4 @@
-# Connected Neighbours
+# Vicinity
 
 > **"Voisins, services et bonne humeur."**
 > Plateforme collaborative sécurisée et extensible de quartiers : services entre
@@ -28,7 +28,7 @@ d'interrogation MongoDB et toute l'infrastructure (Docker, CI).
 
 ## 1. Vision produit
 
-Connected Neighbours est une plateforme orientée **quartiers**. Un administrateur
+Vicinity est une plateforme orientée **quartiers**. Un administrateur
 définit géographiquement un quartier, et les habitants peuvent ensuite :
 
 - **Échanger des services** (gratuits ou payants via un système de points), avec
@@ -90,9 +90,10 @@ participation, **fonctionnement offline-first** avec base locale embarquée
 ```
 
 L'architecture cible prévoit également : un objet store (PDF) type MinIO/S3,
-un reverse-proxy (Traefik), un broker temps réel pour WebSocket (Redis pour
-le scaling Socket.IO), et un provider OIDC pour SSO + MFA. Ces briques
-**ne sont pas encore mises en place** et arriveront aux Épices suivantes.
+un reverse-proxy (Traefik), un clustering Socket.IO avec broker (Redis pour
+le scaling), et un provider OIDC pour SSO + MFA. Ces briques seront montées/en
+durcies en Épice 15. **Socket.IO** et un DSL `/dsl/compile` sont déjà embarqués
+pour les flux DEV des épiques 10 et 12.
 
 ---
 
@@ -107,29 +108,34 @@ atomiques** (un commit Conventional par tâche).
 | **1** — Conteneurisation DEV (Postgres+PostGIS, Mongo, Neo4j)       | ✅ |
 | **2** — Squelette backend Node.js + Express + TypeScript            | ✅ |
 | **3** — Modèles de données et persistance (3 bases)                 | ✅ |
-| 4 — Authentification, SSO & MFA                                     | ⏳ |
+| 4 — Authentification, SSO & MFA                                     | ✅ |
 | 5 — Conformité RGPD                                                 | ⏳ |
-| 6 — Modélisation géographique du quartier                           | ⏳ |
-| 7 — Annonces, services et système de points                         | ⏳ |
-| 8 — Documents PDF & signatures                                      | ⏳ |
-| 9 — Événements + recommandations Neo4j                              | ⏳ |
-| 10 — Messagerie multimédia + présence temps réel                    | ⏳ |
-| 11 — Votes + système de plugins                                     | ⏳ |
-| 12 — DSL maison MongoDB (lex/yacc)                                  | ⏳ |
-| 13 — Frontends React (client + admin)                               | ⏳ |
-| 14 — Client Desktop JavaFX                                          | ⏳ |
+| 6 — Modélisation géographique du quartier                           | ✅ |
+| 7 — Annonces, services et système de points                         | ✅ |
+| 8 — Documents PDF & signatures                                      | ✅ |
+| 9 — Événements + recommandations Neo4j                              | ✅ |
+| 10 — Messagerie multimédia + présence temps réel                    | ✅ |
+| 11 — Votes + système de plugins                                     | ✅ |
+| 12 — DSL maison MongoDB (lex/yacc)                                  | ✅ |
+| 13 — Frontends React (client + admin)                               | ✅ |
+| 14 — Client Desktop JavaFX                                          | ✅ |
 | 15 — Observabilité, sécurité avancée, livraison                     | ⏳ |
 
-### Historique git (à ce jour)
+### Historique git (extrait récent sur `main`)
 
 ```
-a2be4bc feat(backend): expose readyz aggregating database health checks
-c00c085 feat(backend): integrate neo4j driver with social graph constraints
-a02f5ee feat(backend): integrate mongoose models for documents events messages and listings
-29b77f4 feat(backend): integrate prisma with initial schema and postgres connection
-0f05d56 feat(backend): scaffold express typescript api with health endpoint and first e2e test
-a58f2d0 feat(infra): bootstrap dev docker compose stack with postgres mongo and neo4j
-521830f init commit setup
+9cab932 feat(desktop): javafx vicinity admin skeleton on gradle kotlin
+4e775ac feat(web): vite react scaffolds for vicinity client and admin
+a71fc47 feat(dsl): mongo FIND dialect compile endpoint plus lex yacc reference
+4740100 feat(backend): neighbourhood polls votes and builtin plugin bootstrap
+84cce68 feat(backend): add messaging REST and socket.io presence hints
+45792b9 feat(backend): add events API and neo4j-backed recommendations
+171bb9c feat(documents): add pdf upload signature zones and mfa-protected signing
+23bd2b9 feat(listings): expose crud and accept flow with contract creation
+1b7c5bd feat(wallet): add points wallet with transactional transfers
+2fd0785 feat(points): add PointTransaction model and PointTxReason enum for transaction tracking
+e65f9ec feat(neighbourhood): add point lookup and overlap detection
+9c90421 feat(neighbourhood): add crud with postgis polygon validation
 ```
 
 ---
@@ -172,8 +178,8 @@ a58f2d0 feat(infra): bootstrap dev docker compose stack with postgres mongo and 
 └── README.md                 # ce fichier
 ```
 
-> Chaque sous-projet vide contient un `README.md` décrivant la stack
-> envisagée et la façon de l'initialiser le moment venu.
+> Les dossiers **`web-client/`, `web-admin/`, `lex-yacc/`, `desktop-client/`**
+> contiennent des squelettes documentés avec leur README local (`npm`, Gradle…).
 
 ---
 
@@ -193,8 +199,8 @@ a58f2d0 feat(infra): bootstrap dev docker compose stack with postgres mongo and 
 
 ```bash
 # 1) Cloner
-git clone <repo-url> connected-neighbours
-cd connected-neighbours
+git clone <repo-url> vicinity
+cd vicinity
 
 # 2) Démarrer les bases de données
 make up                           # crée .env.dev + docker compose up -d
@@ -209,11 +215,23 @@ npm run db:generate               # génère @prisma/client typé
 
 # 4) Lancer les vérifications
 npm run lint                      # ESLint type-aware strict
-npm test                          # 7 tests verts (unit + intégration)
+npm test                          # Jest (--runInBand ; intégration si Docker UP)
 npm run build                     # compile vers dist/
 
-# 5) Démarrer en watch
+# 5) Backend en boucle DEV
 npm run dev                       # http://localhost:3000
+```
+
+### Faces web Vicinity (Vite + React)
+
+Deux terminaux depuis la **racine** du repo :
+
+```bash
+cd web-client && npm install && npm run dev   # proxifie /api → :3000
+```
+
+```bash
+cd web-admin && npm install && npm run dev    # même proxy, port 5174 affiché par Vite
 ```
 
 ### Commandes Make

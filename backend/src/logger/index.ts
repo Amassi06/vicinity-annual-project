@@ -5,7 +5,7 @@ const isDev = env.NODE_ENV === 'development';
 
 const options: LoggerOptions = {
   level: env.LOG_LEVEL,
-  base: { service: 'connected-neighbours-backend' },
+  base: { service: 'vicinity-backend' },
   redact: ['req.headers.authorization', 'req.headers.cookie', '*.password', '*.token'],
 };
 

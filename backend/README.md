@@ -1,4 +1,4 @@
-# Backend — Connected Neighbours
+# Backend — Vicinity
 
 API REST Node.js + Express + TypeScript.
 

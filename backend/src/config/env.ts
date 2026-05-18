@@ -29,7 +29,7 @@ const EnvSchema = z.object({
     .default('dev-refresh-secret-change-me-in-prod-please-32chars+'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
-  JWT_ISSUER: z.string().default('connected-neighbours'),
+  JWT_ISSUER: z.string().default('vicinity'),
   STORAGE_DIR: z.string().default('./storage/documents'),
   STORAGE_MAX_PDF_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
 });
