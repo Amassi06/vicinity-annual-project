@@ -3,6 +3,7 @@ import { prisma } from '../db/prisma.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from './jwt.js';
 import type { Role } from './jwt.js';
+import { generateMfaSecret, verifyTotp, type MfaEnrollment } from './totp.js';
 
 export interface SignupInput {
   email: string;
@@ -77,6 +78,56 @@ export async function logout(refreshToken: string): Promise<void> {
     where: { refreshTokenHash: hashRefreshToken(refreshToken), revokedAt: null },
     data: { revokedAt: new Date() },
   });
+}
+
+export async function enrollMfa(userId: string): Promise<MfaEnrollment> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('user_not_found');
+  const enrollment = generateMfaSecret(user.email);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { mfaSecret: enrollment.secret, mfaEnabled: false },
+  });
+  return enrollment;
+}
+
+export async function activateMfa(userId: string, token: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.mfaSecret) throw new Error('mfa_not_enrolled');
+  if (!verifyTotp(token, user.mfaSecret)) throw new Error('invalid_totp');
+  await prisma.user.update({ where: { id: userId }, data: { mfaEnabled: true } });
+}
+
+export async function disableMfa(userId: string, token: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.mfaEnabled || !user.mfaSecret) throw new Error('mfa_not_enabled');
+  if (!verifyTotp(token, user.mfaSecret)) throw new Error('invalid_totp');
+  await prisma.user.update({
+    where: { id: userId },
+    data: { mfaEnabled: false, mfaSecret: null },
+  });
+}
+
+export async function verifyMfaForUser(userId: string, token: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.mfaEnabled || !user.mfaSecret) return false;
+  return verifyTotp(token, user.mfaSecret);
+}
+
+/**
+ * SSO : émet un access token court (5 min) consommable par le client desktop.
+ * L'utilisateur doit déjà être authentifié sur le web (donc avoir un access token valide).
+ */
+export async function issueSsoToken(userId: string): Promise<{ ssoToken: string }> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('user_not_found');
+  const ssoToken = signAccessToken({
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+    mfa: user.mfaEnabled,
+  });
+  return { ssoToken };
 }
 
 interface UserForToken {

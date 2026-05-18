@@ -86,4 +86,82 @@ router.get('/auth/admin-only', requireAuth, requireRole('ADMIN'), (_req, res) =>
   res.status(200).json({ ok: true });
 });
 
+// ----------------------------------------------------------------------------
+// MFA (TOTP — RFC 6238)
+// ----------------------------------------------------------------------------
+
+const TotpSchema = z.object({ token: z.string().min(6).max(8) });
+
+router.post('/auth/mfa/enroll', requireAuth, async (req: Request, res: Response) => {
+  if (!req.auth) {
+    res.status(401).json({ error: 'missing_token' });
+    return;
+  }
+  const enrollment = await authService.enrollMfa(req.auth.sub);
+  res.status(200).json(enrollment);
+});
+
+router.post('/auth/mfa/activate', requireAuth, async (req: Request, res: Response) => {
+  if (!req.auth) {
+    res.status(401).json({ error: 'missing_token' });
+    return;
+  }
+  const parsed = TotpSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'invalid_payload' });
+    return;
+  }
+  try {
+    await authService.activateMfa(req.auth.sub, parsed.data.token);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post('/auth/mfa/verify', requireAuth, async (req: Request, res: Response) => {
+  if (!req.auth) {
+    res.status(401).json({ error: 'missing_token' });
+    return;
+  }
+  const parsed = TotpSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'invalid_payload' });
+    return;
+  }
+  const ok = await authService.verifyMfaForUser(req.auth.sub, parsed.data.token);
+  res.status(ok ? 200 : 401).json({ valid: ok });
+});
+
+router.post('/auth/mfa/disable', requireAuth, async (req: Request, res: Response) => {
+  if (!req.auth) {
+    res.status(401).json({ error: 'missing_token' });
+    return;
+  }
+  const parsed = TotpSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'invalid_payload' });
+    return;
+  }
+  try {
+    await authService.disableMfa(req.auth.sub, parsed.data.token);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+// ----------------------------------------------------------------------------
+// SSO — émet un token d'accès consommable par le client desktop JavaFX
+// ----------------------------------------------------------------------------
+
+router.post('/auth/sso/issue', requireAuth, async (req: Request, res: Response) => {
+  if (!req.auth) {
+    res.status(401).json({ error: 'missing_token' });
+    return;
+  }
+  const result = await authService.issueSsoToken(req.auth.sub);
+  res.status(200).json(result);
+});
+
 export const authRouter = router;
