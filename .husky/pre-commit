@@ -1,0 +1,16 @@
+# Garde-fou minimal — sera enrichi par sous-projet.
+
+FILES=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$FILES" ] && exit 0
+
+if echo "$FILES" | xargs grep -lE '^(<<<<<<<|=======|>>>>>>>) ' 2>/dev/null | grep -q .; then
+  echo "Marqueurs de conflit Git detectes dans des fichiers stages."
+  exit 1
+fi
+
+if echo "$FILES" | xargs grep -lE '(AKIA[0-9A-Z]{16}|-----BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY-----)' 2>/dev/null | grep -q .; then
+  echo "Secret potentiel detecte. Commit refuse."
+  exit 1
+fi
+
+exit 0

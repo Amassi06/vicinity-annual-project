@@ -1,0 +1,37 @@
+import { z } from 'zod';
+
+const EnvSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().positive().default(3000),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  DATABASE_URL: z
+    .string()
+    .url()
+    .default(
+      'postgresql://cn_app:cn_dev_password@localhost:55432/connected_neighbours?schema=public',
+    ),
+  MONGO_URL: z
+    .string()
+    .url()
+    .default(
+      'mongodb://cn_root:cn_dev_password@localhost:57017/connected_neighbours?authSource=admin',
+    ),
+  NEO4J_URL: z.string().url().default('bolt://localhost:57687'),
+  NEO4J_USER: z.string().default('neo4j'),
+  NEO4J_PASSWORD: z.string().default('cn_dev_password'),
+  JWT_ACCESS_SECRET: z
+    .string()
+    .min(32)
+    .default('dev-access-secret-change-me-in-prod-please-32chars+'),
+  JWT_REFRESH_SECRET: z
+    .string()
+    .min(32)
+    .default('dev-refresh-secret-change-me-in-prod-please-32chars+'),
+  JWT_ACCESS_TTL: z.string().default('15m'),
+  JWT_REFRESH_TTL: z.string().default('7d'),
+  JWT_ISSUER: z.string().default('connected-neighbours'),
+});
+
+export type Env = z.infer<typeof EnvSchema>;
+
+export const env: Env = EnvSchema.parse(process.env);
