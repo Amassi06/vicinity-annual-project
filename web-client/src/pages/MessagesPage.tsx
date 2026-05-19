@@ -28,10 +28,23 @@ export function MessagesPage(): ReactElement {
   useEffect(() => {
     const token = getAccessToken();
     if (!token) return undefined;
-    const s = io({ path: '/socket.io', auth: { token } });
+    const s = io({
+      path: '/socket.io',
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 3,
+    });
     socketRef.current = s;
     s.on('message:new', (payload: ChatMsg) => {
       setMessages((prev) => [...prev, payload]);
+    });
+    s.on('connect_error', (connectErr: Error) => {
+      const hint =
+        connectErr.message.includes('parser') ||
+        connectErr.message.includes('ECONNREFUSED')
+          ? ' — vérifiez que le backend tourne sur :3000 (npm run dev dans backend/)'
+          : '';
+      setErr(`Socket.IO : ${connectErr.message}${hint}`);
     });
     return () => {
       s.disconnect();

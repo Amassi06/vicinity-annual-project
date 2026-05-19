@@ -1,21 +1,36 @@
 # docs/api
 
-Spécification d'API publique du backend.
+Spécification d'API publique du backend Vicinity.
 
-## Format
+## Fichiers
 
-OpenAPI 3.1, fichier source unique `openapi.yaml` (ou éclaté par domaine
-puis assemblé via `$ref`).
+| Fichier | Rôle |
+|---------|------|
+| `openapi.yaml` | Source OpenAPI 3.0.3 (routes REST actuelles) |
 
-## Génération
+## Swagger UI (développement)
 
-- À envisager : génération depuis le code (`zod-to-openapi`, `express-zod-api`)
-  pour garder la spec en phase avec les schémas Zod déjà utilisés côté
-  backend (`backend/src/config/env.ts` et futurs DTO).
-- Rendu HTML statique avec Redoc ou Swagger UI (servi sous `/docs` ou via
-  GitHub Pages).
+Avec le backend lancé (`cd backend && npm run dev`) :
+
+- **Interface interactive :** [http://localhost:3000/docs](http://localhost:3000/docs)
+- **Spec brute :** [http://localhost:3000/openapi.yaml](http://localhost:3000/openapi.yaml)
+
+### Tester une route protégée
+
+1. `POST /auth/signup` ou `POST /auth/login` dans Swagger.
+2. Copier `accessToken` de la réponse.
+3. Bouton **Authorize** → `Bearer <accessToken>` (sans le préfixe `Bearer` dans certains clients ; Swagger ajoute le schéma HTTP Bearer automatiquement : coller uniquement le JWT).
+
+## Synchronisation avec le code
+
+La spec est maintenue **manuellement** à côté des routeurs Express
+(`backend/src/http/routes/`). Lors de l’ajout d’une route, mettre à jour
+`openapi.yaml`.
+
+À envisager plus tard : `zod-to-openapi` pour générer les schémas depuis
+les DTO Zod existants.
 
 ## Versionnement
 
-Convention sémantique sur l'URL : `/api/v1/...`. Breaking changes → bump
-majeur + maintien temporaire de l'ancienne version.
+Les routes sont aujourd’hui à la racine (`/auth/...`, `/neighbourhoods/...`).
+Une future version pourrait être préfixée `/api/v1/...`.

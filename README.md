@@ -169,7 +169,7 @@ e65f9ec feat(neighbourhood): add point lookup and overlap detection
 │
 ├── docs/
 │   ├── adr/                  # Architecture Decision Records (MADR)
-│   ├── api/                  # OpenAPI / Swagger (à venir)
+│   ├── api/                  # OpenAPI (`openapi.yaml`) + Swagger UI sur /docs
 │   └── architecture/         # Diagrammes C4, séquence, vue déploiement
 │
 ├── scripts/                  # Scripts dev (seed, dump, smoke...)
@@ -178,7 +178,8 @@ e65f9ec feat(neighbourhood): add point lookup and overlap detection
 └── README.md                 # ce fichier
 ```
 
-> Les dossiers **`web-client/`, `web-admin/`, `lex-yacc/`, `desktop-client/`**
+> Les dossiers **`lex-yacc/`** restent des squelettes documentés ; les fronts React et
+> **`desktop-client/`** sont branchés sur l’API.
 > contiennent des squelettes documentés avec leur README local (`npm`, Gradle…).
 
 ---
@@ -220,6 +221,7 @@ npm run build                     # compile vers dist/
 
 # 5) Backend en boucle DEV
 npm run dev                       # http://localhost:3000
+# Swagger UI : http://localhost:3000/docs
 ```
 
 ### Faces web Vicinity (Vite + React)
@@ -242,6 +244,14 @@ cd web-admin && npm install && npm run dev    # même proxy, port 5174 affiché 
 | **web-admin** (`:5174`) | Auth, CRUD quartiers (Geoman), chevauchements PostGIS, compilateur DSL (MOD/ADMIN), crédit points (ADMIN) |
 
 Promouvoir un compte en `ADMIN` (Prisma Studio / SQL) pour créer des quartiers depuis l’admin.
+
+### Client bureau JavaFX
+
+```bash
+cd desktop-client && ./gradlew run   # JDK 21+, backend sur :3000
+```
+
+Connexion e-mail / mot de passe, jeton SSO (`POST /auth/sso/issue`), cache H2 des quartiers hors-ligne, crédit portefeuille et DSL admin. Voir `desktop-client/README.md`.
 
 ### Commandes Make
 

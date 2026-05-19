@@ -9,11 +9,13 @@ import { eventsRouter } from './routes/events.js';
 import { messagesRouter } from './routes/messages.js';
 import { pollsRouter } from './routes/polls.js';
 import { dslRouter } from './routes/dsl.js';
+import { mountOpenApiDocs } from './openapi.js';
 
 export function createApp(): Express {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '1mb' }));
+  mountOpenApiDocs(app);
   app.use(healthRouter);
   app.use(authRouter);
   app.use(neighbourhoodRouter);

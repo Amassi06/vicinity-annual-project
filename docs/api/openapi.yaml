@@ -1,0 +1,1625 @@
+openapi: 3.0.3
+info:
+  title: Vicinity API
+  description: |
+    API REST du backend **Vicinity** (Connected Neighbours) — quartiers PostGIS,
+    portefeuille de points, annonces, documents PDF signés (MFA), événements,
+    messagerie, sondages et DSL MongoDB.
+
+    ## Authentification
+    La plupart des routes exigent un jeton JWT :
+    `Authorization: Bearer <accessToken>` (obtenu via `/auth/login` ou `/auth/signup`).
+
+    ## Temps réel
+    La messagerie expose aussi **Socket.IO** sur le même hôte (événements `message:new`,
+    présence). Non décrit dans ce schéma OpenAPI.
+  version: 0.1.0
+  contact:
+    name: Vicinity — Connected Neighbours
+
+servers:
+  - url: http://localhost:3000
+    description: Backend local (npm run dev)
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Neighbourhoods
+  - name: Wallet
+  - name: Listings
+  - name: Documents
+  - name: Events
+  - name: Messages
+  - name: Polls
+  - name: DSL
+
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      operationId: healthz
+      responses:
+        '200':
+          description: Processus vivant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthzResponse'
+
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness probe (Postgres, Mongo, Neo4j)
+      operationId: readyz
+      responses:
+        '200':
+          description: Toutes les dépendances sont prêtes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyzResponse'
+        '503':
+          description: Au moins une dépendance est indisponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyzResponse'
+
+  /auth/signup:
+    post:
+      tags: [Auth]
+      summary: Inscription
+      operationId: authSignup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Compte créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Connexion
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Jetons émis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renouveler les jetons
+      operationId: authRefresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Nouveaux jetons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Déconnexion (révoque la session refresh)
+      operationId: authLogout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '204':
+          description: Session révoquée
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Profil courant
+      operationId: authMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Utilisateur authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /auth/admin-only:
+    get:
+      tags: [Auth]
+      summary: Route de test rôle ADMIN
+      operationId: authAdminOnly
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Accès autorisé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /auth/mfa/enroll:
+    post:
+      tags: [Auth]
+      summary: Démarrer l'enrôlement MFA (TOTP)
+      operationId: mfaEnroll
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Secret et URI otpauth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaEnrollment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/mfa/activate:
+    post:
+      tags: [Auth]
+      summary: Activer le MFA avec un code TOTP
+      operationId: mfaActivate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TotpRequest'
+      responses:
+        '204':
+          description: MFA activé
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/mfa/verify:
+    post:
+      tags: [Auth]
+      summary: Vérifier un code TOTP
+      operationId: mfaVerify
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TotpRequest'
+      responses:
+        '200':
+          description: Résultat de vérification
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valid]
+                properties:
+                  valid:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/mfa/disable:
+    post:
+      tags: [Auth]
+      summary: Désactiver le MFA
+      operationId: mfaDisable
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TotpRequest'
+      responses:
+        '204':
+          description: MFA désactivé
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/sso/issue:
+    post:
+      tags: [Auth]
+      summary: Émettre un jeton court pour le client desktop
+      operationId: authSsoIssue
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Jeton SSO (access token court)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ssoToken]
+                properties:
+                  ssoToken:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /neighbourhoods:
+    get:
+      tags: [Neighbourhoods]
+      summary: Lister les quartiers
+      operationId: listNeighbourhoods
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des quartiers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Neighbourhood'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Neighbourhoods]
+      summary: Créer un quartier (ADMIN)
+      operationId: createNeighbourhood
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NeighbourhoodCreate'
+      responses:
+        '201':
+          description: Quartier créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Neighbourhood'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Nom déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+
+  /neighbourhoods/lookup/point:
+    get:
+      tags: [Neighbourhoods]
+      summary: Quartiers contenant un point (lon, lat)
+      operationId: lookupNeighbourhoodByPoint
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+      responses:
+        '200':
+          description: Correspondances spatiales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matches:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Neighbourhood'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /neighbourhoods/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UuidId'
+    get:
+      tags: [Neighbourhoods]
+      summary: Détail d'un quartier
+      operationId: getNeighbourhood
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Quartier trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Neighbourhood'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Neighbourhoods]
+      summary: Mettre à jour un quartier (ADMIN)
+      operationId: updateNeighbourhood
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NeighbourhoodUpdate'
+      responses:
+        '200':
+          description: Quartier mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Neighbourhood'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Neighbourhoods]
+      summary: Supprimer un quartier (ADMIN)
+      operationId: deleteNeighbourhood
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Supprimé
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /neighbourhoods/{id}/overlaps:
+    parameters:
+      - $ref: '#/components/parameters/UuidId'
+    get:
+      tags: [Neighbourhoods]
+      summary: Quartiers qui se chevauchent (ADMIN)
+      operationId: listNeighbourhoodOverlaps
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des chevauchements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overlaps:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Neighbourhood'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /me/wallet:
+    get:
+      tags: [Wallet]
+      summary: Solde et transactions récentes
+      operationId: getMyWallet
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Portefeuille
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/wallet/credit:
+    post:
+      tags: [Wallet]
+      summary: Créditer des points (ADMIN)
+      operationId: adminWalletCredit
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreditRequest'
+      responses:
+        '204':
+          description: Points crédités
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Destinataire introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+
+  /listings:
+    get:
+      tags: [Listings]
+      summary: Lister les annonces
+      operationId: listListings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: neighbourhoodId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [offer, request]
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, closed, cancelled]
+      responses:
+        '200':
+          description: Annonces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Listing'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Listings]
+      summary: Créer une annonce
+      operationId: createListing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListingCreate'
+      responses:
+        '201':
+          description: Annonce créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /listings/{id}:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    get:
+      tags: [Listings]
+      summary: Détail d'une annonce
+      operationId: getListing
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /listings/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    post:
+      tags: [Listings]
+      summary: Annuler une annonce
+      operationId: cancelListing
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /listings/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    post:
+      tags: [Listings]
+      summary: Accepter une annonce (crée un contrat)
+      operationId: acceptListing
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Contrat créé
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '402':
+          description: Fonds insuffisants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /contracts/{id}/complete:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    post:
+      tags: [Listings]
+      summary: Finaliser un contrat
+      operationId: completeContract
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /documents:
+    post:
+      tags: [Documents]
+      summary: Téléverser un PDF
+      operationId: uploadDocument
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, title]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Fichier PDF (application/pdf)
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 160
+      responses:
+        '201':
+          description: Document enregistré
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /documents/{id}:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    get:
+      tags: [Documents]
+      summary: Métadonnées du document
+      operationId: getDocument
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{id}/file:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    get:
+      tags: [Documents]
+      summary: Télécharger le fichier PDF
+      operationId: getDocumentFile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Flux binaire PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{id}/zones:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    post:
+      tags: [Documents]
+      summary: Définir les zones de signature
+      operationId: setDocumentZones
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetZonesRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /documents/{id}/zones/{index}/sign:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+      - name: index
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+    post:
+      tags: [Documents]
+      summary: Signer une zone (TOTP requis si MFA actif)
+      operationId: signDocumentZone
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignZoneRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          description: MFA requis ou code invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /events:
+    get:
+      tags: [Events]
+      summary: Événements publiés d'un quartier
+      operationId: listEvents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: neighbourhoodId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Events]
+      summary: Créer un événement (brouillon)
+      operationId: createEvent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /events/recommendations:
+    get:
+      tags: [Events]
+      summary: Recommandations Neo4j pour l'utilisateur
+      operationId: getEventRecommendations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: neighbourhoodId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+
+  /events/{id}/publish:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    post:
+      tags: [Events]
+      summary: Publier un événement
+      operationId: publishEvent
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /events/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    post:
+      tags: [Events]
+      summary: Annuler un événement
+      operationId: cancelEvent
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+
+  /events/{id}/interest:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    post:
+      tags: [Events]
+      summary: Exprimer son intérêt
+      operationId: eventInterest
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+
+  /events/{id}/decline:
+    parameters:
+      - $ref: '#/components/parameters/MongoOrUuidId'
+    post:
+      tags: [Events]
+      summary: Décliner un événement
+      operationId: eventDecline
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+
+  /conversations/{cid}/messages:
+    parameters:
+      - name: cid
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 120
+        description: Identifiant de conversation
+    get:
+      tags: [Messages]
+      summary: Messages récents (max 80)
+      operationId: listMessages
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Messages]
+      summary: Envoyer un message
+      operationId: createMessage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /polls:
+    get:
+      tags: [Polls]
+      summary: Sondages d'un quartier
+      operationId: listPolls
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: neighbourhoodId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Poll'
+    post:
+      tags: [Polls]
+      summary: Créer un sondage
+      operationId: createPoll
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+
+  /polls/{id}:
+    parameters:
+      - $ref: '#/components/parameters/MongoObjectId'
+    get:
+      tags: [Polls]
+      summary: Détail et résultats agrégés
+      operationId: getPoll
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /polls/{id}/vote:
+    parameters:
+      - $ref: '#/components/parameters/MongoObjectId'
+    post:
+      tags: [Polls]
+      summary: Voter
+      operationId: votePoll
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollVote'
+      responses:
+        '201':
+          description: Bulletin enregistré
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '409':
+          description: Déjà voté ou sondage fermé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+
+  /dsl/compile:
+    post:
+      tags: [DSL]
+      summary: Compiler une requête FIND (MODERATOR ou ADMIN)
+      operationId: compileDsl
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dsl]
+              properties:
+                dsl:
+                  type: string
+                  minLength: 1
+                  maxLength: 10000
+                  example: 'FIND messages WHERE neighbourhoodId = "…" LIMIT 10'
+      responses:
+        '200':
+          description: Filtre MongoDB compilé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  compiled:
+                    type: object
+                    additionalProperties: true
+        '400':
+          description: Erreur de syntaxe DSL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: dsl_parse_error
+                  detail:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token obtenu via POST /auth/login
+
+  parameters:
+    UuidId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MongoObjectId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-f0-9]{24}$'
+    MongoOrUuidId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+
+  responses:
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    Unauthorized:
+      description: Non authentifié
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    Forbidden:
+      description: Rôle insuffisant
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    Conflict:
+      description: Conflit d'état
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+
+  schemas:
+    ErrorBody:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: object
+        issues:
+          type: array
+          items:
+            type: object
+        required:
+          type: array
+          items:
+            type: string
+
+    HealthzResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        uptime:
+          type: number
+
+    ReadyzResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ready, degraded]
+        checks:
+          type: object
+          properties:
+            postgres:
+              type: boolean
+            mongo:
+              type: boolean
+            neo4j:
+              type: boolean
+
+    SignupRequest:
+      type: object
+      required: [email, password, displayName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 120
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    AuthTokens:
+      type: object
+      required: [accessToken, refreshToken]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    AuthResult:
+      allOf:
+        - $ref: '#/components/schemas/AuthTokens'
+        - type: object
+          required: [user]
+          properties:
+            user:
+              $ref: '#/components/schemas/UserPublic'
+
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        displayName:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        mfaEnabled:
+          type: boolean
+
+    Role:
+      type: string
+      enum: [HABITANT, MODERATOR, ADMIN]
+
+    MeResponse:
+      type: object
+      properties:
+        sub:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        mfa:
+          type: boolean
+
+    TotpRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 6
+          maxLength: 8
+
+    MfaEnrollment:
+      type: object
+      properties:
+        secret:
+          type: string
+        otpauthUri:
+          type: string
+
+    GeoJsonPolygon:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type:
+          type: string
+          enum: [Polygon]
+        coordinates:
+          type: array
+          description: Anneaux [lon, lat], premier point = dernier point
+          items:
+            type: array
+            items:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                type: number
+
+    Neighbourhood:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        boundary:
+          $ref: '#/components/schemas/GeoJsonPolygon'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    NeighbourhoodCreate:
+      type: object
+      required: [name, boundary]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        boundary:
+          $ref: '#/components/schemas/GeoJsonPolygon'
+
+    NeighbourhoodUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        boundary:
+          $ref: '#/components/schemas/GeoJsonPolygon'
+
+    WalletSummary:
+      type: object
+      properties:
+        balance:
+          type: integer
+        recent:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    AdminCreditRequest:
+      type: object
+      required: [toUserId, amount, reason]
+      properties:
+        toUserId:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 100000
+        reason:
+          type: string
+          enum: [WELCOME_BONUS, ADMIN_ADJUSTMENT, REFUND]
+
+    ListingCreate:
+      type: object
+      required: [neighbourhoodId, title, kind, category]
+      properties:
+        neighbourhoodId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        kind:
+          type: string
+          enum: [offer, request]
+        category:
+          type: string
+        pricePoints:
+          type: integer
+          default: 0
+
+    Listing:
+      type: object
+      additionalProperties: true
+
+    Document:
+      type: object
+      additionalProperties: true
+
+    SetZonesRequest:
+      type: object
+      required: [zones]
+      properties:
+        zones:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/SignatureZone'
+        participants:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    SignatureZone:
+      type: object
+      required: [page, x, y, width, height]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        x:
+          type: number
+          minimum: 0
+        y:
+          type: number
+          minimum: 0
+        width:
+          type: number
+          exclusiveMinimum: 0
+        height:
+          type: number
+          exclusiveMinimum: 0
+        required:
+          type: boolean
+          default: true
+
+    SignZoneRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          pattern: '^\d{6}$'
+          description: Code TOTP à 6 chiffres
+
+    EventCreate:
+      type: object
+      required: [neighbourhoodId, title, startsAt, endsAt]
+      properties:
+        neighbourhoodId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        lon:
+          type: number
+        lat:
+          type: number
+        address:
+          type: string
+        capacity:
+          type: integer
+          nullable: true
+
+    Event:
+      type: object
+      additionalProperties: true
+
+    MessageCreate:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 20000
+        attachments:
+          type: array
+          maxItems: 12
+          items:
+            $ref: '#/components/schemas/MessageAttachment'
+
+    MessageAttachment:
+      type: object
+      required: [storageKey, contentType, size, kind]
+      properties:
+        storageKey:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: integer
+        kind:
+          type: string
+          enum: [image, audio, video, file]
+
+    Message:
+      type: object
+      additionalProperties: true
+
+    PollCreate:
+      type: object
+      required: [neighbourhoodId, title, options]
+      properties:
+        neighbourhoodId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        options:
+          type: array
+          minItems: 2
+          maxItems: 16
+          items:
+            type: string
+        closesAt:
+          type: string
+          format: date-time
+
+    PollVote:
+      type: object
+      required: [choiceIndex]
+      properties:
+        choiceIndex:
+          type: integer
+          minimum: 0
+
+    Poll:
+      type: object
+      additionalProperties: true
