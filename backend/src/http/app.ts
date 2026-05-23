@@ -9,6 +9,8 @@ import { eventsRouter } from './routes/events.js';
 import { messagesRouter } from './routes/messages.js';
 import { pollsRouter } from './routes/polls.js';
 import { dslRouter } from './routes/dsl.js';
+import { gdprRouter } from './routes/gdpr.js';
+import { pluginsRouter } from './routes/plugins.js';
 import { mountOpenApiDocs } from './openapi.js';
 
 export function createApp(): Express {
@@ -26,5 +28,7 @@ export function createApp(): Express {
   app.use(messagesRouter);
   app.use(pollsRouter);
   app.use(dslRouter);
+  app.use(gdprRouter);
+  app.use(pluginsRouter);
   return app;
 }

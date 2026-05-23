@@ -30,8 +30,14 @@ const EnvSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
   JWT_ISSUER: z.string().default('vicinity'),
+  STORAGE_BACKEND: z.enum(['local', 'minio']).optional(),
   STORAGE_DIR: z.string().default('./storage/documents'),
   STORAGE_MAX_PDF_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
+  MINIO_ENDPOINT: z.string().url().default('http://localhost:59000'),
+  MINIO_ACCESS_KEY: z.string().min(1).default('cn_minio'),
+  MINIO_SECRET_KEY: z.string().min(1).default('cn_dev_password'),
+  MINIO_BUCKET: z.string().min(1).default('vicinity-documents'),
+  MINIO_REGION: z.string().default('us-east-1'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

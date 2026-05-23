@@ -72,6 +72,16 @@ export function EventsPage(): ReactElement {
     await load();
   }
 
+  async function decline(id: string): Promise<void> {
+    await apiFetch(`/events/${id}/decline`, { method: 'POST' });
+    await load();
+  }
+
+  async function cancel(id: string): Promise<void> {
+    await apiFetch(`/events/${id}/cancel`, { method: 'POST' });
+    await load();
+  }
+
   return (
     <section className="panel">
       <h1 style={{ marginTop: 0 }}>Événements</h1>
@@ -111,6 +121,12 @@ export function EventsPage(): ReactElement {
                 <strong>{ev.title}</strong> — {new Date(ev.startsAt).toLocaleString()}
                 <button type="button" className="secondary" onClick={() => void interest(ev._id)}>
                   Intéressé
+                </button>
+                <button type="button" className="secondary" onClick={() => void decline(ev._id)}>
+                  Décliner
+                </button>
+                <button type="button" className="secondary" onClick={() => void cancel(ev._id)}>
+                  Annuler
                 </button>
               </li>
             ))}

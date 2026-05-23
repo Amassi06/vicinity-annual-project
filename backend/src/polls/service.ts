@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import { PollModel } from '../db/mongo/models/poll.model.js';
 import { VoteModel } from '../db/mongo/models/vote.model.js';
+import { getPollPlugin } from '../plugins/registry.js';
 import { PollCreateSchema, PollVoteSchema } from './schemas.js';
 
 export type PollCreateInput = z.infer<typeof PollCreateSchema>;
@@ -22,12 +23,15 @@ function isExpired(poll: { closesAt: Date | null; status: string }): boolean {
 
 export async function createPoll(ownerId: string, raw: unknown) {
   const input = parsePollCreate(raw);
+  const plugin = getPollPlugin(input.pluginId);
+  plugin.validateCreate?.(input);
 
   return PollModel.create({
     neighbourhoodId: input.neighbourhoodId,
     createdBy: ownerId,
     title: input.title,
     options: input.options,
+    pluginId: input.pluginId,
     closesAt: input.closesAt ?? null,
     status: 'open',
   });
@@ -69,10 +73,22 @@ export async function getPoll(pollId: string) {
   const tallies: Record<number, number> = {};
   for (const row of talliesRaw) tallies[row._id] = row.count;
 
+  const totalVotes = talliesRaw.reduce((acc, r) => acc + r.count, 0);
+  const plugin = getPollPlugin(poll.pluginId);
+  const pluginResults =
+    plugin.enrichResults?.({
+      pollId,
+      options: poll.options,
+      tallies,
+      totalVotes,
+    }) ?? {};
+
   return {
     poll,
     tallies,
-    totalVotes: talliesRaw.reduce((acc, r) => acc + r.count, 0),
+    totalVotes,
+    plugin: { id: plugin.id, name: plugin.name },
+    pluginResults,
   };
 }
 

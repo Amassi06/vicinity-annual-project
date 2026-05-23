@@ -15,10 +15,12 @@ type ListingDoc = {
 export function ListingsPage(): ReactElement {
   const { selectedId } = useNeighbourhoods();
   const [items, setItems] = useState<ListingDoc[]>([]);
+  const [contractId, setContractId] = useState('');
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<'offer' | 'request'>('offer');
   const [category, setCategory] = useState('services');
   const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!selectedId) {
@@ -27,7 +29,7 @@ export function ListingsPage(): ReactElement {
     }
     try {
       const res = await apiFetch<{ items: ListingDoc[] }>(
-        `/listings?neighbourhoodId=${selectedId}&status=open`,
+        `/listings?neighbourhoodId=${selectedId}`,
       );
       setItems(res.items);
     } catch (e) {
@@ -61,7 +63,24 @@ export function ListingsPage(): ReactElement {
   }
 
   async function accept(id: string): Promise<void> {
-    await apiFetch(`/listings/${id}/accept`, { method: 'POST' });
+    const res = await apiFetch<{ contract: { _id: string } }>(`/listings/${id}/accept`, {
+      method: 'POST',
+    });
+    setContractId(String(res.contract._id));
+    setMsg(`Contrat créé : ${res.contract._id}`);
+    await load();
+  }
+
+  async function cancel(id: string): Promise<void> {
+    await apiFetch(`/listings/${id}/cancel`, { method: 'POST' });
+    await load();
+  }
+
+  async function completeContract(ev: FormEvent): Promise<void> {
+    ev.preventDefault();
+    if (!contractId.trim()) return;
+    await apiFetch(`/contracts/${contractId.trim()}/complete`, { method: 'POST' });
+    setMsg('Contrat finalisé.');
     await load();
   }
 
@@ -84,14 +103,34 @@ export function ListingsPage(): ReactElement {
               Créer
             </button>
           </form>
+          <form className="inline-form" onSubmit={(e) => void completeContract(e)}>
+            <input
+              value={contractId}
+              onChange={(e) => setContractId(e.target.value)}
+              placeholder="ID contrat à finaliser"
+            />
+            <button type="submit" className="secondary">
+              Finaliser contrat
+            </button>
+          </form>
+          {msg ? <p>{msg}</p> : null}
           {err ? <p className="error-msg">{err}</p> : null}
           <ul className="item-list">
             {items.map((l) => (
               <li key={l._id}>
-                <strong>{l.title}</strong> ({l.kind}) — {l.pricePoints} pts
-                <button type="button" className="secondary" onClick={() => void accept(l._id)}>
-                  Accepter
-                </button>
+                <strong>{l.title}</strong> ({l.kind}, {l.status}) — {l.pricePoints} pts
+                <div className="row-actions">
+                  {l.status === 'open' ? (
+                    <>
+                      <button type="button" className="secondary" onClick={() => void accept(l._id)}>
+                        Accepter
+                      </button>
+                      <button type="button" className="secondary" onClick={() => void cancel(l._id)}>
+                        Annuler
+                      </button>
+                    </>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

@@ -23,6 +23,18 @@ export function AdminShell(): ReactElement {
               Crédit points
             </NavLink>
           )}
+          <NavLink to="/documents" className={({ isActive }) => (isActive ? 'router-active' : '')}>
+            Documents
+          </NavLink>
+          <NavLink to="/plugins" className={({ isActive }) => (isActive ? 'router-active' : '')}>
+            Plugins
+          </NavLink>
+          <NavLink to="/sso" className={({ isActive }) => (isActive ? 'router-active' : '')}>
+            SSO bureau
+          </NavLink>
+          <NavLink to="/mfa" className={({ isActive }) => (isActive ? 'router-active' : '')}>
+            MFA
+          </NavLink>
           {!user ? (
             <>
               <NavLink to="/login">Connexion</NavLink>

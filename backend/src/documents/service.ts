@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../db/prisma.js';
 import { DocumentModel, type DocumentEntity } from '../db/mongo/models/index.js';
 import { verifyMfaForUser } from '../auth/service.js';
-import { saveBuffer } from '../storage/local.js';
+import { saveBuffer } from '../storage/index.js';
 import type { SetZonesInput, SignatureZoneInput } from './schemas.js';
 
 export interface UploadInput {
@@ -25,6 +25,15 @@ export async function uploadDocument(input: UploadInput): Promise<DocumentEntity
     participants: [input.ownerId],
   });
   return document;
+}
+
+export async function listDocumentsForUser(userId: string, limit = 50): Promise<DocumentEntity[]> {
+  return DocumentModel.find({
+    $or: [{ ownerId: userId }, { participants: userId }],
+  })
+    .sort({ updatedAt: -1 })
+    .limit(limit)
+    .exec();
 }
 
 export async function getDocument(

@@ -12,6 +12,9 @@ import { ListingsPage } from './pages/ListingsPage.js';
 import { PollsPage } from './pages/PollsPage.js';
 import { MessagesPage } from './pages/MessagesPage.js';
 import { WalletPage } from './pages/WalletPage.js';
+import { MfaPage } from './pages/MfaPage.js';
+import { DocumentsPage } from './pages/DocumentsPage.js';
+import { PrivacyPage } from './pages/PrivacyPage.js';
 
 export function App(): ReactElement {
   return (
@@ -30,6 +33,9 @@ export function App(): ReactElement {
                 <Route path="/sondages" element={<PollsPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
                 <Route path="/portefeuille" element={<WalletPage />} />
+                <Route path="/documents" element={<DocumentsPage />} />
+                <Route path="/mfa" element={<MfaPage />} />
+                <Route path="/confidentialite" element={<PrivacyPage />} />
               </Route>
             </Route>
           </Route>

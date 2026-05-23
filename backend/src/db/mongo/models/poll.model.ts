@@ -5,6 +5,7 @@ export interface PollEntity extends MongoDocument {
   createdBy: string;
   title: string;
   options: string[];
+  pluginId: string;
   status: 'open' | 'closed';
   closesAt: Date | null;
   createdAt: Date;
@@ -17,6 +18,7 @@ const PollSchema = new Schema<PollEntity>(
     createdBy: { type: String, required: true, index: true },
     title: { type: String, required: true },
     options: [{ type: String, required: true }],
+    pluginId: { type: String, default: 'standard', index: true },
     status: {
       type: String,
       enum: ['open', 'closed'],

@@ -115,7 +115,8 @@ atomiques** (un commit Conventional par tâche).
 | 8 — Documents PDF & signatures                                      | ✅ |
 | 9 — Événements + recommandations Neo4j                              | ✅ |
 | 10 — Messagerie multimédia + présence temps réel                    | ✅ |
-| 11 — Votes + système de plugins                                     | ✅ |
+| 11 — Votes + système de plugins (3 plugins sondages + `/plugins`)     | ✅ |
+| 5 — RGPD (export, suppression, consentements)                       | ✅ |
 | 12 — DSL maison MongoDB (lex/yacc)                                  | ✅ |
 | 13 — Frontends React (client + admin)                               | ✅ |
 | 14 — Client Desktop JavaFX                                          | ✅ |
@@ -191,7 +192,7 @@ e65f9ec feat(neighbourhood): add point lookup and overlap detection
 - **Docker Engine ≥ 24** + **Docker Compose v2**
 - **Node.js ≥ 20.11** + **npm ≥ 10** (pour le backend)
 - **GNU Make**
-- Ports libres sur l'hôte : `55432` (Postgres), `57017` (Mongo), `57474`/`57687` (Neo4j)
+- Ports libres sur l'hôte : `55432` (Postgres), `57017` (Mongo), `57474`/`57687` (Neo4j), `59000`/`59001` (MinIO)
 
 > Les ports sont décalés (`5XXXX`) pour ne pas entrer en conflit avec des
 > instances locales existantes.
@@ -297,6 +298,9 @@ développeur.
 | `cn-postgres` | `postgis/postgis:16-3.4`  | `55432`   | PostGIS activé via SQL d'init                 |
 | `cn-mongo`    | `mongo:7.0`               | `57017`   | Auth root activée                             |
 | `cn-neo4j`    | `neo4j:5.20-community`    | `57474` (HTTP), `57687` (Bolt) | Plugin **APOC** chargé      |
+| `cn-minio`    | `minio/minio`             | `59000` (API S3), `59001` (console) | Bucket `vicinity-documents` (PDF) |
+
+Les PDF sont stockés via **MinIO** (API S3) par défaut. Variables backend : `STORAGE_BACKEND=minio`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`. Console web : http://localhost:59001 (identifiants dans `infra/docker/.env.dev`). Fallback disque local : `STORAGE_BACKEND=local`.
 
 ### Vérifications
 

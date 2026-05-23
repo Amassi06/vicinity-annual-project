@@ -9,11 +9,12 @@ import {
 } from '../../documents/schemas.js';
 import {
   getDocument,
+  listDocumentsForUser,
   setZones,
   signZone,
   uploadDocument,
 } from '../../documents/service.js';
-import { readStoredFile } from '../../storage/local.js';
+import { readStoredFile } from '../../storage/index.js';
 
 export const documentsRouter: Router = Router();
 
@@ -39,6 +40,11 @@ function parseId(req: Request): string | null {
 
 const UploadBodySchema = z.object({
   title: z.string().min(1).max(160),
+});
+
+documentsRouter.get('/documents', requireAuth, async (req, res) => {
+  const items = await listDocumentsForUser(req.auth!.sub);
+  res.json({ items });
 });
 
 documentsRouter.post(

@@ -24,7 +24,7 @@ type Tk =
   | { k: 'eof' };
 
 export class DSLParseError extends Error {
-  readonly name = 'DSLParseError';
+  override readonly name = 'DSLParseError';
 }
 
 function isIdentCont(ch: string | undefined): boolean {
@@ -41,7 +41,7 @@ export function lexDslLite(input: string): Tk[] {
   const tokens: Tk[] = [];
   let i = 0;
   while (i < input.length) {
-    const ch = input[i];
+    const ch = input[i]!;
     if (/\s/.test(ch)) {
       i += 1;
       continue;
@@ -89,11 +89,11 @@ export function lexDslLite(input: string): Tk[] {
       continue;
     }
 
-    if (/[0-9]/.test(input[i]) || input[i] === '-') {
+    if (/[0-9]/.test(ch) || ch === '-') {
       let j = i;
       if (input[j] === '-') j += 1;
       const startDigits = j;
-      while (j < input.length && /[0-9]/.test(input[j])) j += 1;
+      while (j < input.length && /[0-9]/.test(input[j]!)) j += 1;
       if (j === startDigits) throw new DSLParseError('nombre_invalide');
 
       const n = Number.parseInt(input.slice(i, j), 10);
@@ -105,7 +105,7 @@ export function lexDslLite(input: string): Tk[] {
 
     if (/[a-zA-Z_]/.test(ch)) {
       let j = i + 1;
-      while (j < input.length && /[a-zA-Z0-9_]/.test(input[j])) j += 1;
+      while (j < input.length && /[a-zA-Z0-9_]/.test(input[j]!)) j += 1;
       tokens.push({ k: 'ident', v: input.slice(i, j) });
       i = j;
       continue;

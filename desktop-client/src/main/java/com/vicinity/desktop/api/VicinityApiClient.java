@@ -94,6 +94,10 @@ public final class VicinityApiClient {
         return exchange("GET", "/readyz", Optional.empty(), false, JsonNode.class);
     }
 
+    public JsonNode getPluginsCatalog() throws Exception {
+        return exchange("GET", "/plugins", Optional.empty(), true, JsonNode.class);
+    }
+
     public void logoutRemote() {
         final String refresh = AppSession.refreshToken();
         if (refresh == null || refresh.isBlank()) {

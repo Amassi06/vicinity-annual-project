@@ -4,6 +4,7 @@ import * as authService from '../../auth/service.js';
 import { requireAuth, requireRole } from '../../auth/middleware.js';
 import { logger } from '../../logger/index.js';
 import { prisma } from '../../db/prisma.js';
+import { writeAuditLog } from '../../audit/service.js';
 
 const router = Router();
 
@@ -21,6 +22,12 @@ const LoginSchema = z.object({
 const RefreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
+
+function clientIp(req: Request): string | undefined {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') return forwarded.split(',')[0]?.trim();
+  return req.socket.remoteAddress ?? undefined;
+}
 
 router.post('/auth/signup', async (req: Request, res: Response) => {
   const parsed = SignupSchema.safeParse(req.body);
@@ -49,6 +56,11 @@ router.post('/auth/login', async (req: Request, res: Response) => {
   }
   try {
     const result = await authService.login(parsed.data.email, parsed.data.password);
+    await writeAuditLog({
+      userId: result.user.id,
+      action: 'LOGIN',
+      ipAddress: clientIp(req) ?? null,
+    });
     res.status(200).json(result);
   } catch {
     res.status(401).json({ error: 'invalid_credentials' });
@@ -75,7 +87,10 @@ router.post('/auth/logout', async (req: Request, res: Response) => {
     res.status(400).json({ error: 'invalid_payload' });
     return;
   }
-  await authService.logout(parsed.data.refreshToken);
+  const userId = await authService.logout(parsed.data.refreshToken);
+  if (userId) {
+    await writeAuditLog({ userId, action: 'LOGOUT', ipAddress: clientIp(req) ?? null });
+  }
   res.status(204).send();
 });
 

@@ -73,11 +73,17 @@ export async function refresh(refreshToken: string): Promise<AuthTokens> {
   return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
 }
 
-export async function logout(refreshToken: string): Promise<void> {
+export async function logout(refreshToken: string): Promise<string | null> {
+  const hash = hashRefreshToken(refreshToken);
+  const session = await prisma.session.findUnique({
+    where: { refreshTokenHash: hash },
+    select: { userId: true, revokedAt: true },
+  });
   await prisma.session.updateMany({
-    where: { refreshTokenHash: hashRefreshToken(refreshToken), revokedAt: null },
+    where: { refreshTokenHash: hash, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+  return session?.revokedAt ? null : (session?.userId ?? null);
 }
 
 export async function enrollMfa(userId: string): Promise<MfaEnrollment> {

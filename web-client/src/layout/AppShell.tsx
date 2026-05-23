@@ -31,6 +31,15 @@ export function AppShell(): ReactElement {
           <NavLink to="/portefeuille" className={({ isActive }) => (isActive ? 'router-active' : '')}>
             Portefeuille
           </NavLink>
+          <NavLink to="/documents" className={({ isActive }) => (isActive ? 'router-active' : '')}>
+            Documents
+          </NavLink>
+          <NavLink to="/mfa" className={({ isActive }) => (isActive ? 'router-active' : '')}>
+            MFA
+          </NavLink>
+          <NavLink to="/confidentialite" className={({ isActive }) => (isActive ? 'router-active' : '')}>
+            RGPD
+          </NavLink>
           {!user ? (
             <>
               <NavLink to="/login">Connexion</NavLink>

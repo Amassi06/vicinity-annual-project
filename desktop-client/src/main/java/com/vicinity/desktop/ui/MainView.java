@@ -4,6 +4,7 @@ import com.vicinity.desktop.api.VicinityApiClient;
 import com.vicinity.desktop.api.dto.MeResponse;
 import com.vicinity.desktop.session.AppSession;
 import com.vicinity.desktop.ui.tabs.DslTab;
+import com.vicinity.desktop.ui.tabs.PluginsTab;
 import com.vicinity.desktop.ui.tabs.HomeTab;
 import com.vicinity.desktop.ui.tabs.NeighbourhoodsTab;
 import com.vicinity.desktop.ui.tabs.WalletTab;
@@ -80,8 +81,9 @@ public final class MainView extends BorderPane {
         final Tab hoods = new Tab("Quartiers", neighbourhoodsTab);
         final Tab wallet = new Tab("Portefeuille", new WalletTab(api));
         final Tab dsl = new Tab("DSL", new DslTab(api));
+        final Tab plugins = new Tab("Plugins", new PluginsTab(api));
 
-        tabs.getTabs().addAll(home, hoods, wallet, dsl);
+        tabs.getTabs().addAll(home, hoods, wallet, dsl, plugins);
         setCenter(tabs);
     }
 

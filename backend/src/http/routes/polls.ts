@@ -45,8 +45,12 @@ pollsRouter.post('/polls', requireAuth, async (req, res) => {
     res.status(201).json(doc);
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';
-    const status = msg === 'invalid_body' ? 400 : 400;
-    res.status(status).json({ error: msg || 'invalid_input' });
+    const statusByCode: Record<string, number> = {
+      invalid_body: 400,
+      unknown_poll_plugin: 400,
+      plugin_min_three_options: 422,
+    };
+    res.status(statusByCode[msg] ?? 400).json({ error: msg || 'invalid_input' });
   }
 });
 
