@@ -11,7 +11,12 @@ const TEST_TIMEOUT_MS = 20_000;
 
 interface ReadyzBody {
   status: 'ready' | 'degraded';
-  checks: { postgres: boolean; mongo: boolean; neo4j: boolean };
+  checks: {
+    postgres: boolean;
+    mongo: boolean;
+    neo4j: boolean;
+    storage: { ok: boolean; backend: string };
+  };
 }
 
 describe('GET /readyz', () => {
@@ -37,7 +42,12 @@ describe('GET /readyz', () => {
 
       expect(res.status).toBe(200);
       expect(body.status).toBe('ready');
-      expect(body.checks).toEqual({ postgres: true, mongo: true, neo4j: true });
+      expect(body.checks).toMatchObject({
+        postgres: true,
+        mongo: true,
+        neo4j: true,
+        storage: { ok: true, backend: 'local' },
+      });
     },
     TEST_TIMEOUT_MS,
   );
