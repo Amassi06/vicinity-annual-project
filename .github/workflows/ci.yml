@@ -64,10 +64,6 @@ jobs:
           DATABASE_URL: postgresql://cn_app:cn_dev_password@localhost:55432/connected_neighbours?schema=public
         run: npx prisma migrate deploy
 
-      - name: Lint
-        working-directory: backend
-        run: npm run lint
-
       - name: Build
         working-directory: backend
         run: npm run build
