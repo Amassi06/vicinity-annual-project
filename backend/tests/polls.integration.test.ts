@@ -44,7 +44,8 @@ describe('Polls with plugins', () => {
       .get('/plugins')
       .set('Authorization', `Bearer ${accessToken}`);
     expect(plugins.status).toBe(200);
-    expect(plugins.body.polls.length).toBeGreaterThanOrEqual(2);
+    const pluginsBody = plugins.body as { polls: unknown[] };
+    expect(pluginsBody.polls.length).toBeGreaterThanOrEqual(2);
 
     const created = await request(app)
       .post('/polls')

@@ -44,6 +44,7 @@ describe('RGPD routes', () => {
       .get('/me/export')
       .set('Authorization', `Bearer ${accessToken}`);
     expect(exported.status).toBe(200);
-    expect(exported.body.user.email).toBe(EMAIL);
+    const exportedBody = exported.body as { user: { email: string } };
+    expect(exportedBody.user.email).toBe(EMAIL);
   });
 });
