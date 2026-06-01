@@ -1,14 +1,12 @@
 # === OS ===
 .DS_Store
 Thumbs.db
-
 # === Editors / IDE ===
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
-
 # === Logs ===
 *.log
 logs/
@@ -16,7 +14,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
 # === Node.js ===
 node_modules/
 dist/
@@ -29,7 +26,6 @@ coverage/
 .next/
 .turbo/
 .vite/
-
 # === Env / secrets ===
 .env
 .env.*
@@ -39,7 +35,6 @@ coverage/
 *.key
 *.crt
 secrets/
-
 # === Java / Gradle / Maven ===
 target/
 .gradle/
@@ -47,33 +42,67 @@ target/
 !desktop-client/dist/*.jar
 hs_err_pid*
 .mvn/wrapper/maven-wrapper.jar
-
 # === Python ===
 __pycache__/
 *.pyc
 .venv/
 venv/
-
 # === Docker ===
 *.pid
 docker-compose.override.yml
-
 # === Test artifacts ===
 test-results/
 playwright-report/
 junit.xml
-
 # === Misc ===
 tmp/
 .tmp/
-
 # === Local PDF storage (DEV) — production uses S3/MinIO ===
 backend/storage/
-
 # === Husky internals ===
 .husky/_/
-
 # === Docker Compose env files ===
 infra/docker/.env.dev
 infra/docker/.env.test
 infra/docker/.env.prod
+# === Unity ===
+# Dossiers générés — jamais à committer
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+# Cache VisualStudio / Rider
+.vs/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+# Fichiers de build IL2CPP
+*.dll.mdb
+*.exe.mdb
+# Crash reports Unity
+sysinfo.txt
+# Fichiers de cache Assets
+[Aa]ssets/AssetStoreTools*
+# TextMeshPro (inclure les sources, ignorer le cache)
+[Aa]ssets/Plugins/Editor/JetBrains*
+# JetBrains Rider
+.idea/
+# Packages résolus (géré par Package Manager)
+/[Pp]ackages/
+!/[Pp]ackages/manifest.json
+!/[Pp]ackages/packages-lock.json
